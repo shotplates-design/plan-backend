@@ -1,0 +1,4441 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Plan API",
+    "description": "\nBackend for **Plan**, an NFL-first sports betting web app (**play money only**).\n\n* Auth: email + password (argon2id). Returns a JWT (`Authorization: Bearer ...`) and also sets an\n  httpOnly cookie; either works.\n* Money: all amounts are **integer cents** of play currency (`PLAY`).\n* Odds: American odds (e.g. `-110`, `+150`). Sample odds are **not real**.\n* Errors: `{\"error\": {\"code\", \"message\", \"details\"}}`.\n* Paywall: 10 free tries per user (one try = unlocking one prop), then credit packs bought via\n  Stripe Checkout. `GET /auth/me` returns `usage`. Gated endpoints return **402**\n  `UPGRADE_REQUIRED` (`details.reason`: `prop_locked` | `out_of_tries`). Stripe is **test mode only**.\n",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Health",
+        "operationId": "health_api_v1_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/signup": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Signup",
+        "description": "Create an account (with a play-money wallet + welcome credits) and log in.",
+        "operationId": "signup_api_v1_auth_signup_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignupRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict (e.g. odds changed)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Login",
+        "operationId": "login_api_v1_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict (e.g. odds changed)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Logout",
+        "description": "Revoke the current session and clear the cookie.",
+        "operationId": "logout_api_v1_auth_logout_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict (e.g. odds changed)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Me",
+        "description": "Current user plus paywall `usage` (UI hints; the server enforces gating).",
+        "operationId": "me_api_v1_auth_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict (e.g. odds changed)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/users/me/preferences": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Get Preferences",
+        "operationId": "get_preferences_api_v1_users_me_preferences_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreferencesOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict (e.g. odds changed)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Update Preferences",
+        "description": "Set sportsbook look-and-feel: `fanduel` | `draftkings`.",
+        "operationId": "update_preferences_api_v1_users_me_preferences_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreferencesUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreferencesOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict (e.g. odds changed)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/teams": {
+      "get": {
+        "tags": [
+          "games"
+        ],
+        "summary": "List Teams",
+        "operationId": "list_teams_api_v1_teams_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TeamOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Teams Api V1 Teams Get"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict (e.g. odds changed)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/games": {
+      "get": {
+        "tags": [
+          "games"
+        ],
+        "summary": "List Games",
+        "description": "Weekly board (shape mirrors plan-frontend/mock/data.js). Auth optional.\n\nPaywall: props the caller hasn't unlocked show only the `hitRate.last5` teaser; `season` and\n`vsOpp` are null, `unlocked=false`, and the withheld fields are listed in `prop.locked`.\nListing never consumes tries.",
+        "operationId": "list_games_api_v1_games_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "season",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 2100,
+                  "minimum": 1920
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "examples": [
+                2026
+              ],
+              "title": "Season"
+            }
+          },
+          {
+            "name": "week",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 25,
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "examples": [
+                5
+              ],
+              "title": "Week"
+            }
+          },
+          {
+            "name": "season_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/SeasonType",
+              "default": "REG"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/GameStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "team",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 4
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Team abbr, e.g. KC",
+              "title": "Team"
+            },
+            "description": "Team abbr, e.g. KC"
+          },
+          {
+            "name": "include_props",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Embed props + hit rates (heavier payload)",
+              "default": true,
+              "title": "Include Props"
+            },
+            "description": "Embed props + hit rates (heavier payload)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GameBoardOut"
+                  },
+                  "title": "Response List Games Api V1 Games Get"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict (e.g. odds changed)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/games/{game_id}": {
+      "get": {
+        "tags": [
+          "games"
+        ],
+        "summary": "Get Game",
+        "description": "Game with markets + props (paywall-filtered like the board). Auth optional; free.",
+        "operationId": "get_game_api_v1_games__game_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Game Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameBoardOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict (e.g. odds changed)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/games/{game_id}/props": {
+      "get": {
+        "tags": [
+          "games"
+        ],
+        "summary": "Get Game Props",
+        "description": "Props list (same objects/filtering as GameBoardOut.props). Free.",
+        "operationId": "get_game_props_api_v1_games__game_id__props_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Game Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PropOut"
+                  },
+                  "title": "Response Get Game Props Api V1 Games  Game Id  Props Get"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict (e.g. odds changed)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/games/{game_id}/props/{prop_id}": {
+      "get": {
+        "tags": [
+          "games"
+        ],
+        "summary": "Get Prop Detail",
+        "description": "Prop hit-rate detail. Auth required. **This is the metered action: 1 try.**\n\nFree tries are used first (FREE_TRIES, default 10 per user), then purchased tries.\nRe-opening the same prop within the re-open window (same ET day by default) is free, so\nrefreshes/retries never double-charge. `charged` says whether this call used a try.\n402 UPGRADE_REQUIRED (details.reason=out_of_tries, with packs) when none remain.",
+        "operationId": "get_prop_detail_api_v1_games__game_id__props__prop_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Game Id"
+            }
+          },
+          {
+            "name": "prop_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Prop Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropDetailOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict (e.g. odds changed)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "UPGRADE_REQUIRED (details.reason: prop_locked | out_of_tries)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/games/{game_id}/props/{prop_id}/hit-rates": {
+      "get": {
+        "tags": [
+          "games"
+        ],
+        "summary": "Get Prop Hit Rate Window",
+        "description": "One hit-rate window (never consumes a try). `L5` follows the board teaser; `season`\nrequires the prop detail to have been opened in the re-open window (402 prop_locked).",
+        "operationId": "get_prop_hit_rate_window_api_v1_games__game_id__props__prop_id__hit_rates_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Game Id"
+            }
+          },
+          {
+            "name": "prop_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Prop Id"
+            }
+          },
+          {
+            "name": "window",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "L5",
+                "season"
+              ],
+              "type": "string",
+              "description": "Hit-rate window",
+              "title": "Window"
+            },
+            "description": "Hit-rate window"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HitRateWindowOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict (e.g. odds changed)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "UPGRADE_REQUIRED (details.reason: prop_locked | out_of_tries)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/games/{game_id}/props/{prop_id}/splits/vs-opponent": {
+      "get": {
+        "tags": [
+          "games"
+        ],
+        "summary": "Get Prop Vs Opponent",
+        "description": "Vs-opponent split (never consumes a try). 402 UPGRADE_REQUIRED (prop_locked) until the\nprop detail has been opened in the re-open window.",
+        "operationId": "get_prop_vs_opponent_api_v1_games__game_id__props__prop_id__splits_vs_opponent_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Game Id"
+            }
+          },
+          {
+            "name": "prop_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Prop Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/HitRateVsOpp"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Get Prop Vs Opponent Api V1 Games  Game Id  Props  Prop Id  Splits Vs Opponent Get"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict (e.g. odds changed)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "UPGRADE_REQUIRED (details.reason: prop_locked | out_of_tries)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/bets/quote": {
+      "post": {
+        "tags": [
+          "bets"
+        ],
+        "summary": "Quote Bet",
+        "description": "Price a bet slip at current odds without placing it (powers the live bet slip).",
+        "operationId": "quote_bet_api_v1_bets_quote_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BetSlipIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetQuoteOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict (e.g. odds changed)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/bets": {
+      "post": {
+        "tags": [
+          "bets"
+        ],
+        "summary": "Place Bet",
+        "description": "Place a single or parlay bet.\n\nValidates selections are open, the submitted odds/lines still match (409 `ODDS_CHANGED`\notherwise, unless `accept_odds_changes`), stake limits, and play-money balance.\nDebits the stake via the wallet ledger. Retrying with the same `idempotency_key` returns the\noriginal bet with HTTP 200.",
+        "operationId": "place_bet_api_v1_bets_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceBetRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict (e.g. odds changed)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "bets"
+        ],
+        "summary": "List My Bets",
+        "operationId": "list_my_bets_api_v1_bets_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/BetStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_BetOut_"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict (e.g. odds changed)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/bets/{bet_id}": {
+      "get": {
+        "tags": [
+          "bets"
+        ],
+        "summary": "Get My Bet",
+        "operationId": "get_my_bet_api_v1_bets__bet_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "bet_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Bet Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict (e.g. odds changed)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/wallet": {
+      "get": {
+        "tags": [
+          "wallet"
+        ],
+        "summary": "Wallet Balance",
+        "description": "Play-money balance (integer cents). No real-money deposits/withdrawals exist.",
+        "operationId": "wallet_balance_api_v1_wallet_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict (e.g. odds changed)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/wallet/transactions": {
+      "get": {
+        "tags": [
+          "wallet"
+        ],
+        "summary": "Wallet Transactions",
+        "operationId": "wallet_transactions_api_v1_wallet_transactions_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_WalletTransactionOut_"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict (e.g. odds changed)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/billing/plans": {
+      "get": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "List Plans",
+        "description": "Pricing: free tries + credit packs. Works without Stripe keys (falls back to config prices).\nIncludes the caller's `usage` when authenticated.",
+        "operationId": "list_plans_api_v1_billing_plans_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlansOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict (e.g. odds changed)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "STRIPE_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "BILLING_DISABLED / STRIPE_NOT_CONFIGURED / STRIPE_LIVE_KEY_REFUSED / STRIPE_KEY_INVALID / PRICE_NOT_CONFIGURED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/billing/checkout-session": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "Create Checkout Session",
+        "description": "Hosted Stripe Checkout for a credit pack (one-time payment, `mode=payment`).\n\nThe client sends only a pack key; the server maps it to a Price lookup key. Tries are\ncredited by the webhook (or the success-page sync), never by this call.",
+        "operationId": "create_checkout_session_api_v1_billing_checkout_session_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckoutIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckoutOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict (e.g. odds changed)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "STRIPE_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "BILLING_DISABLED / STRIPE_NOT_CONFIGURED / STRIPE_LIVE_KEY_REFUSED / STRIPE_KEY_INVALID / PRICE_NOT_CONFIGURED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/billing/usage": {
+      "get": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "Get Usage",
+        "description": "Free tries, purchased balance and recent purchases from OUR DB.\n\nWith `session_id` (success page), the Checkout Session is fetched from Stripe and fulfilled\nif paid \u2014 idempotent with the webhook, so tries are credited exactly once.",
+        "operationId": "get_usage_api_v1_billing_usage_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "cs_\u2026 from the success page; syncs that purchase from Stripe immediately",
+              "title": "Session Id"
+            },
+            "description": "cs_\u2026 from the success page; syncs that purchase from Stripe immediately"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingUsageOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict (e.g. odds changed)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "STRIPE_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "BILLING_DISABLED / STRIPE_NOT_CONFIGURED / STRIPE_LIVE_KEY_REFUSED / STRIPE_KEY_INVALID / PRICE_NOT_CONFIGURED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/webhooks/stripe": {
+      "post": {
+        "tags": [
+          "webhooks"
+        ],
+        "summary": "Stripe Webhook",
+        "description": "Stripe webhook receiver. No JWT; the `Stripe-Signature` header is mandatory.\n\nIdempotent by event id; always re-fetches the subscription so delivery order doesn't matter.",
+        "operationId": "stripe_webhook_api_v1_webhooks_stripe_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookAck"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_SIGNATURE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "WEBHOOK_FAILED (Stripe retries)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "STRIPE_NOT_CONFIGURED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AuthResponse": {
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/UserOut"
+          },
+          "access_token": {
+            "type": "string",
+            "title": "Access Token",
+            "description": "JWT. Also set as an httpOnly cookie."
+          },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type",
+            "default": "bearer"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user",
+          "access_token",
+          "expires_at"
+        ],
+        "title": "AuthResponse"
+      },
+      "BetLegIn": {
+        "properties": {
+          "selection_key": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selection Key",
+            "description": "Frontend key, e.g. \"tb-dal|spread|away\" or \"tb-dal|prop|godwin-rec\""
+          },
+          "selection_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selection Id",
+            "description": "Internal UUID (alternate to selection_key)"
+          },
+          "odds_american": {
+            "type": "integer",
+            "title": "Odds American",
+            "description": "Price the user saw on the slip"
+          },
+          "line": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line",
+            "description": "Line the user saw (e.g. \"+7.5\", \"Over 4.5\", or 47.5 for totals)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "odds_american"
+        ],
+        "title": "BetLegIn",
+        "description": "One leg of a slip.\n\nPrefer `selection_key` matching the frontend mock:\n  \"{gameId}|spread|away\" | \"{gameId}|money|home\" | \"{gameId}|total|over\"\n  \"{gameId}|prop|{propId}\""
+      },
+      "BetLegOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "selection_key": {
+            "type": "string",
+            "title": "Selection Key"
+          },
+          "market": {
+            "type": "string",
+            "title": "Market"
+          },
+          "selection_name": {
+            "type": "string",
+            "title": "Selection Name"
+          },
+          "line": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line"
+          },
+          "odds_american": {
+            "type": "integer",
+            "title": "Odds American"
+          },
+          "result": {
+            "$ref": "#/components/schemas/SelectionResult"
+          },
+          "game": {
+            "$ref": "#/components/schemas/GameBrief"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "selection_key",
+          "market",
+          "selection_name",
+          "line",
+          "odds_american",
+          "result",
+          "game"
+        ],
+        "title": "BetLegOut"
+      },
+      "BetOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "type": {
+            "$ref": "#/components/schemas/BetType"
+          },
+          "status": {
+            "$ref": "#/components/schemas/BetStatus"
+          },
+          "stake_cents": {
+            "type": "integer",
+            "title": "Stake Cents"
+          },
+          "odds_american": {
+            "type": "integer",
+            "title": "Odds American"
+          },
+          "odds_decimal": {
+            "type": "number",
+            "title": "Odds Decimal"
+          },
+          "potential_payout_cents": {
+            "type": "integer",
+            "title": "Potential Payout Cents"
+          },
+          "payout_cents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payout Cents"
+          },
+          "placed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Placed At"
+          },
+          "settled_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settled At"
+          },
+          "legs": {
+            "items": {
+              "$ref": "#/components/schemas/BetLegOut"
+            },
+            "type": "array",
+            "title": "Legs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "status",
+          "stake_cents",
+          "odds_american",
+          "odds_decimal",
+          "potential_payout_cents",
+          "payout_cents",
+          "placed_at",
+          "settled_at",
+          "legs"
+        ],
+        "title": "BetOut"
+      },
+      "BetQuoteOut": {
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/BetType"
+          },
+          "stake_cents": {
+            "type": "integer",
+            "title": "Stake Cents"
+          },
+          "odds_american": {
+            "type": "integer",
+            "title": "Odds American"
+          },
+          "odds_decimal": {
+            "type": "number",
+            "title": "Odds Decimal"
+          },
+          "potential_payout_cents": {
+            "type": "integer",
+            "title": "Potential Payout Cents"
+          },
+          "potential_profit_cents": {
+            "type": "integer",
+            "title": "Potential Profit Cents"
+          },
+          "any_odds_changed": {
+            "type": "boolean",
+            "title": "Any Odds Changed"
+          },
+          "legs": {
+            "items": {
+              "$ref": "#/components/schemas/QuoteLegOut"
+            },
+            "type": "array",
+            "title": "Legs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "stake_cents",
+          "odds_american",
+          "odds_decimal",
+          "potential_payout_cents",
+          "potential_profit_cents",
+          "any_odds_changed",
+          "legs"
+        ],
+        "title": "BetQuoteOut"
+      },
+      "BetSlipIn": {
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/BetType"
+          },
+          "stake_cents": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Stake Cents",
+            "description": "Stake in play-money cents (100 = 1.00)"
+          },
+          "legs": {
+            "items": {
+              "$ref": "#/components/schemas/BetLegIn"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Legs"
+          },
+          "accept_odds_changes": {
+            "type": "boolean",
+            "title": "Accept Odds Changes",
+            "description": "If true, place at current odds even if they moved; otherwise 409 ODDS_CHANGED",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "stake_cents",
+          "legs"
+        ],
+        "title": "BetSlipIn"
+      },
+      "BetStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "won",
+          "lost",
+          "push",
+          "void"
+        ],
+        "title": "BetStatus"
+      },
+      "BetType": {
+        "type": "string",
+        "enum": [
+          "single",
+          "parlay"
+        ],
+        "title": "BetType"
+      },
+      "BillingConfigOut": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "description": "Purchases on (BILLING_ENABLED)"
+          },
+          "stripe_ready": {
+            "type": "boolean",
+            "title": "Stripe Ready",
+            "description": "Billing enabled and a valid TEST key is configured"
+          },
+          "test_mode_only": {
+            "type": "boolean",
+            "title": "Test Mode Only",
+            "default": true
+          },
+          "approval_status": {
+            "type": "string",
+            "title": "Approval Status"
+          },
+          "publishable_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publishable Key",
+            "description": "pk_test_\u2026 only; null if unset"
+          },
+          "offseason": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Offseason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled",
+          "stripe_ready",
+          "approval_status",
+          "publishable_key",
+          "offseason"
+        ],
+        "title": "BillingConfigOut"
+      },
+      "BillingUsageOut": {
+        "properties": {
+          "usage": {
+            "$ref": "#/components/schemas/UsageOut"
+          },
+          "purchases": {
+            "items": {
+              "$ref": "#/components/schemas/PurchaseOut"
+            },
+            "type": "array",
+            "title": "Purchases",
+            "description": "Most recent first (max 20)"
+          },
+          "synced_purchase": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PurchaseOut"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Set when ?session_id= was synced"
+          }
+        },
+        "type": "object",
+        "required": [
+          "usage",
+          "purchases"
+        ],
+        "title": "BillingUsageOut"
+      },
+      "CheckoutIn": {
+        "properties": {
+          "pack": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]{1,32}$",
+            "title": "Pack",
+            "description": "Pack key from /billing/plans",
+            "examples": [
+              "small"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "pack"
+        ],
+        "title": "CheckoutIn"
+      },
+      "CheckoutOut": {
+        "properties": {
+          "checkout_url": {
+            "type": "string",
+            "title": "Checkout Url"
+          },
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "pack": {
+            "type": "string",
+            "title": "Pack"
+          },
+          "tries": {
+            "type": "integer",
+            "title": "Tries"
+          },
+          "unit_amount": {
+            "type": "integer",
+            "title": "Unit Amount"
+          }
+        },
+        "type": "object",
+        "required": [
+          "checkout_url",
+          "session_id",
+          "pack",
+          "tries",
+          "unit_amount"
+        ],
+        "title": "CheckoutOut"
+      },
+      "ErrorBody": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "details": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ErrorBody"
+      },
+      "ErrorResponse": {
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ErrorBody"
+          }
+        },
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "title": "ErrorResponse"
+      },
+      "GameBoardOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Public game id (slug), e.g. \"tb-dal\" / \"kc-buf\""
+          },
+          "uuid": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Uuid",
+            "description": "Internal UUID (stable across re-seeds of same slug)"
+          },
+          "away": {
+            "$ref": "#/components/schemas/TeamBrief"
+          },
+          "home": {
+            "$ref": "#/components/schemas/TeamBrief"
+          },
+          "kickoff": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Kickoff",
+            "description": "ISO-8601 kickoff (tz-aware)"
+          },
+          "kickoffLabel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kickofflabel"
+          },
+          "dateGroup": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dategroup"
+          },
+          "week": {
+            "type": "integer",
+            "title": "Week"
+          },
+          "season": {
+            "type": "integer",
+            "title": "Season"
+          },
+          "seasonType": {
+            "$ref": "#/components/schemas/SeasonType"
+          },
+          "status": {
+            "$ref": "#/components/schemas/GameStatus"
+          },
+          "venue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Venue"
+          },
+          "homeScore": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Homescore"
+          },
+          "awayScore": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Awayscore"
+          },
+          "spread": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SpreadOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "money": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MoneyOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "total": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TotalOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "nflGameId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nflgameid",
+            "description": "Real schedule id, e.g. \"2026_05_BUF_LA\" (null for sample games)"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "description": "\"plan_data\" (real schedule) | \"sample\" (mock slate)",
+            "default": "sample"
+          },
+          "linesSource": {
+            "type": "string",
+            "title": "Linessource",
+            "description": "Spread/total/moneyline source: \"nflverse_schedule\" | \"sample\" | \"mixed\" | \"none\"",
+            "default": "sample"
+          },
+          "isSampleLines": {
+            "type": "boolean",
+            "title": "Issamplelines",
+            "description": "True unless every game line comes from the real schedule file",
+            "default": true
+          },
+          "props": {
+            "items": {
+              "$ref": "#/components/schemas/PropOut"
+            },
+            "type": "array",
+            "title": "Props"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "uuid",
+          "away",
+          "home",
+          "kickoff",
+          "week",
+          "season",
+          "seasonType",
+          "status"
+        ],
+        "title": "GameBoardOut",
+        "description": "Weekly board / game-detail shape \u2014 mirrors plan-frontend/mock/data.js."
+      },
+      "GameBrief": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "home_abbr": {
+            "type": "string",
+            "title": "Home Abbr"
+          },
+          "away_abbr": {
+            "type": "string",
+            "title": "Away Abbr"
+          },
+          "kickoff": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Kickoff"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "home_abbr",
+          "away_abbr",
+          "kickoff"
+        ],
+        "title": "GameBrief"
+      },
+      "GameStatus": {
+        "type": "string",
+        "enum": [
+          "scheduled",
+          "in_progress",
+          "final",
+          "postponed",
+          "cancelled"
+        ],
+        "title": "GameStatus"
+      },
+      "HealthOut": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "database": {
+            "type": "string",
+            "title": "Database"
+          },
+          "environment": {
+            "type": "string",
+            "title": "Environment"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "database",
+          "environment",
+          "version"
+        ],
+        "title": "HealthOut"
+      },
+      "HitRateBucket": {
+        "properties": {
+          "pct": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pct",
+            "description": "Whole percent, round half up; null when total is 0"
+          },
+          "hit": {
+            "type": "integer",
+            "title": "Hit"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "Season: games_played (played games only). last5: up to 5 most recent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pct",
+          "hit",
+          "total"
+        ],
+        "title": "HitRateBucket"
+      },
+      "HitRateOut": {
+        "properties": {
+          "season": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HitRateBucket"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "last5": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HitRateBucket"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "vsOpp": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HitRateVsOpp"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Current season vs this week's opponent"
+          },
+          "vsOppLastSeason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HitRateVsOpp"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Prior REGULAR season vs the same opponent, against this line (playoffs excluded). total 0 \u2192 pct null. null when no prior-season data is loaded."
+          }
+        },
+        "type": "object",
+        "title": "HitRateOut"
+      },
+      "HitRateVsOpp": {
+        "properties": {
+          "pct": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pct",
+            "description": "Whole percent, round half up; null when total is 0"
+          },
+          "hit": {
+            "type": "integer",
+            "title": "Hit"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "Season: games_played (played games only). last5: up to 5 most recent"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "description": "\"vs DAL\" (current season) or \"vs DAL '25\" (prior season)"
+          },
+          "season": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Season",
+            "description": "Season the games come from, e.g. 2026 (vsOpp) / 2025"
+          },
+          "opponent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opponent",
+            "description": "Opponent team abbr, e.g. \"DAL\""
+          }
+        },
+        "type": "object",
+        "required": [
+          "pct",
+          "hit",
+          "total",
+          "label"
+        ],
+        "title": "HitRateVsOpp"
+      },
+      "HitRateWindowOut": {
+        "properties": {
+          "propId": {
+            "type": "string",
+            "title": "Propid"
+          },
+          "window": {
+            "type": "string",
+            "title": "Window"
+          },
+          "hitRate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HitRateBucket"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "propId",
+          "window",
+          "hitRate"
+        ],
+        "title": "HitRateWindowOut"
+      },
+      "LoginRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "LoginRequest"
+      },
+      "MeOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "theme": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Theme"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "fanduel | draftkings | null (show skin picker when null)"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/UsageOut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "display_name",
+          "theme",
+          "created_at",
+          "usage"
+        ],
+        "title": "MeOut",
+        "description": "`/auth/me`: user + paywall usage (additive to UserOut)."
+      },
+      "MoneyOut": {
+        "properties": {
+          "away": {
+            "type": "integer",
+            "title": "Away"
+          },
+          "home": {
+            "type": "integer",
+            "title": "Home"
+          }
+        },
+        "type": "object",
+        "required": [
+          "away",
+          "home"
+        ],
+        "title": "MoneyOut"
+      },
+      "PackOut": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key",
+            "examples": [
+              "small"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "examples": [
+              "30 tries"
+            ]
+          },
+          "tries": {
+            "type": "integer",
+            "title": "Tries"
+          },
+          "unit_amount": {
+            "type": "integer",
+            "title": "Unit Amount",
+            "description": "Cents"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency",
+            "default": "usd"
+          },
+          "lookup_key": {
+            "type": "string",
+            "title": "Lookup Key"
+          },
+          "price_per_try_cents": {
+            "type": "number",
+            "title": "Price Per Try Cents"
+          },
+          "savings_pct": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Savings Pct",
+            "description": "Per-try saving vs the smallest pack"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "stripe",
+              "config"
+            ],
+            "title": "Source",
+            "description": "'stripe' if the price was resolved live from Stripe test mode, else configured"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "name",
+          "tries",
+          "unit_amount",
+          "lookup_key",
+          "price_per_try_cents",
+          "source"
+        ],
+        "title": "PackOut"
+      },
+      "Page_BetOut_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BetOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "Page[BetOut]"
+      },
+      "Page_WalletTransactionOut_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/WalletTransactionOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "Page[WalletTransactionOut]"
+      },
+      "PlaceBetRequest": {
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/BetType"
+          },
+          "stake_cents": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Stake Cents",
+            "description": "Stake in play-money cents (100 = 1.00)"
+          },
+          "legs": {
+            "items": {
+              "$ref": "#/components/schemas/BetLegIn"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Legs"
+          },
+          "accept_odds_changes": {
+            "type": "boolean",
+            "title": "Accept Odds Changes",
+            "description": "If true, place at current odds even if they moved; otherwise 409 ODDS_CHANGED",
+            "default": false
+          },
+          "idempotency_key": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Idempotency Key",
+            "description": "Client-generated key; retries return the same bet"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "stake_cents",
+          "legs"
+        ],
+        "title": "PlaceBetRequest"
+      },
+      "PlansOut": {
+        "properties": {
+          "model": {
+            "type": "string",
+            "const": "credit_packs",
+            "title": "Model",
+            "default": "credit_packs"
+          },
+          "try_unit": {
+            "type": "string",
+            "const": "prop_unlock",
+            "title": "Try Unit",
+            "description": "One try = opening one prop's hit-rate detail; re-opening it the same ET day is free",
+            "default": "prop_unlock"
+          },
+          "free_tries": {
+            "type": "integer",
+            "title": "Free Tries"
+          },
+          "packs": {
+            "items": {
+              "$ref": "#/components/schemas/PackOut"
+            },
+            "type": "array",
+            "title": "Packs"
+          },
+          "billing": {
+            "$ref": "#/components/schemas/BillingConfigOut"
+          },
+          "usage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UsageOut"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Present when authenticated"
+          }
+        },
+        "type": "object",
+        "required": [
+          "free_tries",
+          "packs",
+          "billing"
+        ],
+        "title": "PlansOut"
+      },
+      "PreferencesOut": {
+        "properties": {
+          "theme": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Theme"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Sportsbook look-and-feel. null \u2192 frontend shows the skin picker."
+          }
+        },
+        "type": "object",
+        "required": [
+          "theme"
+        ],
+        "title": "PreferencesOut"
+      },
+      "PreferencesUpdate": {
+        "properties": {
+          "theme": {
+            "$ref": "#/components/schemas/Theme"
+          }
+        },
+        "type": "object",
+        "required": [
+          "theme"
+        ],
+        "title": "PreferencesUpdate"
+      },
+      "PropDetailOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Public prop id, e.g. \"godwin-rec\""
+          },
+          "player": {
+            "type": "string",
+            "title": "Player"
+          },
+          "team": {
+            "type": "string",
+            "title": "Team",
+            "description": "Team abbr"
+          },
+          "market": {
+            "type": "string",
+            "title": "Market",
+            "description": "e.g. \"Receptions\", \"Receiving Yards\", \"Passing Yards\""
+          },
+          "line": {
+            "type": "string",
+            "title": "Line",
+            "description": "e.g. \"Over 4.5\""
+          },
+          "price": {
+            "type": "integer",
+            "title": "Price",
+            "description": "American odds"
+          },
+          "hitRate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HitRateOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "selectionKey": {
+            "type": "string",
+            "title": "Selectionkey",
+            "description": "Bet-slip key: \"{gameId}|prop|{id}\". Pass as selection_key on POST /bets."
+          },
+          "playerId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Playerid",
+            "description": "GSIS player id (nflverse), when matched to real data"
+          },
+          "isSample": {
+            "type": "boolean",
+            "title": "Issample",
+            "description": "True when line/price are SAMPLE (no lines feed yet)",
+            "default": true
+          },
+          "lineSource": {
+            "type": "string",
+            "title": "Linesource",
+            "description": "Where line/price come from: \"sample\" for now",
+            "default": "sample"
+          },
+          "hitRateSource": {
+            "type": "string",
+            "title": "Hitratesource",
+            "description": "\"plan_data\" (real game logs) | \"sample\" (not yet loaded) | \"none\" (no data)",
+            "default": "sample"
+          },
+          "hitRateThroughWeek": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hitratethroughweek",
+            "description": "Last completed week included in hit rates"
+          },
+          "unlocked": {
+            "type": "boolean",
+            "title": "Unlocked",
+            "description": "False when the paywall hides this prop's full hit rates for the caller. Open GET /games/{gameId}/props/{id} to unlock (1 try; re-opening the same ET day is free).",
+            "default": true
+          },
+          "locked": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Locked",
+            "description": "Hit-rate fields withheld until unlocked (\"season\", \"vs_opponent\", \"vs_opponent_last_season\", and \"last5\" when PAYWALL_BOARD_TEASER=none); the corresponding hitRate entries are null."
+          },
+          "gameId": {
+            "type": "string",
+            "title": "Gameid"
+          },
+          "charged": {
+            "type": "boolean",
+            "title": "Charged",
+            "description": "True if this request consumed a try (false on a same-day re-open)"
+          },
+          "bucket": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bucket",
+            "description": "free | paid | unlimited \u2014 what paid for the unlock"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/UsageOut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "player",
+          "team",
+          "market",
+          "line",
+          "price",
+          "selectionKey",
+          "gameId",
+          "charged",
+          "usage"
+        ],
+        "title": "PropDetailOut"
+      },
+      "PropOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Public prop id, e.g. \"godwin-rec\""
+          },
+          "player": {
+            "type": "string",
+            "title": "Player"
+          },
+          "team": {
+            "type": "string",
+            "title": "Team",
+            "description": "Team abbr"
+          },
+          "market": {
+            "type": "string",
+            "title": "Market",
+            "description": "e.g. \"Receptions\", \"Receiving Yards\", \"Passing Yards\""
+          },
+          "line": {
+            "type": "string",
+            "title": "Line",
+            "description": "e.g. \"Over 4.5\""
+          },
+          "price": {
+            "type": "integer",
+            "title": "Price",
+            "description": "American odds"
+          },
+          "hitRate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HitRateOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "selectionKey": {
+            "type": "string",
+            "title": "Selectionkey",
+            "description": "Bet-slip key: \"{gameId}|prop|{id}\". Pass as selection_key on POST /bets."
+          },
+          "playerId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Playerid",
+            "description": "GSIS player id (nflverse), when matched to real data"
+          },
+          "isSample": {
+            "type": "boolean",
+            "title": "Issample",
+            "description": "True when line/price are SAMPLE (no lines feed yet)",
+            "default": true
+          },
+          "lineSource": {
+            "type": "string",
+            "title": "Linesource",
+            "description": "Where line/price come from: \"sample\" for now",
+            "default": "sample"
+          },
+          "hitRateSource": {
+            "type": "string",
+            "title": "Hitratesource",
+            "description": "\"plan_data\" (real game logs) | \"sample\" (not yet loaded) | \"none\" (no data)",
+            "default": "sample"
+          },
+          "hitRateThroughWeek": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hitratethroughweek",
+            "description": "Last completed week included in hit rates"
+          },
+          "unlocked": {
+            "type": "boolean",
+            "title": "Unlocked",
+            "description": "False when the paywall hides this prop's full hit rates for the caller. Open GET /games/{gameId}/props/{id} to unlock (1 try; re-opening the same ET day is free).",
+            "default": true
+          },
+          "locked": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Locked",
+            "description": "Hit-rate fields withheld until unlocked (\"season\", \"vs_opponent\", \"vs_opponent_last_season\", and \"last5\" when PAYWALL_BOARD_TEASER=none); the corresponding hitRate entries are null."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "player",
+          "team",
+          "market",
+          "line",
+          "price",
+          "selectionKey"
+        ],
+        "title": "PropOut",
+        "description": "Player prop \u2014 Plan's hit-rate differentiator. Matches mock prop objects."
+      },
+      "PurchaseOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "pack": {
+            "type": "string",
+            "title": "Pack"
+          },
+          "tries": {
+            "type": "integer",
+            "title": "Tries"
+          },
+          "amount_total": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Total"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PurchaseStatus"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "paid_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid At"
+          },
+          "refunded_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refunded At"
+          },
+          "tries_revoked": {
+            "type": "integer",
+            "title": "Tries Revoked"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "pack",
+          "tries",
+          "amount_total",
+          "currency",
+          "status",
+          "created_at",
+          "paid_at",
+          "refunded_at",
+          "tries_revoked"
+        ],
+        "title": "PurchaseOut"
+      },
+      "PurchaseStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "paid",
+          "refunded",
+          "failed",
+          "expired"
+        ],
+        "title": "PurchaseStatus"
+      },
+      "QuoteLegOut": {
+        "properties": {
+          "selection_key": {
+            "type": "string",
+            "title": "Selection Key"
+          },
+          "selection_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selection Id"
+          },
+          "market": {
+            "type": "string",
+            "title": "Market"
+          },
+          "selection_name": {
+            "type": "string",
+            "title": "Selection Name"
+          },
+          "line": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line"
+          },
+          "odds_american": {
+            "type": "integer",
+            "title": "Odds American"
+          },
+          "requested_odds_american": {
+            "type": "integer",
+            "title": "Requested Odds American"
+          },
+          "odds_changed": {
+            "type": "boolean",
+            "title": "Odds Changed"
+          },
+          "game": {
+            "$ref": "#/components/schemas/GameBrief"
+          }
+        },
+        "type": "object",
+        "required": [
+          "selection_key",
+          "market",
+          "selection_name",
+          "line",
+          "odds_american",
+          "requested_odds_american",
+          "odds_changed",
+          "game"
+        ],
+        "title": "QuoteLegOut"
+      },
+      "SeasonType": {
+        "type": "string",
+        "enum": [
+          "PRE",
+          "REG",
+          "POST"
+        ],
+        "title": "SeasonType"
+      },
+      "SelectionResult": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "won",
+          "lost",
+          "push",
+          "void"
+        ],
+        "title": "SelectionResult"
+      },
+      "SignupRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "Password"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "theme": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Theme"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional initial sportsbook theme"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "SignupRequest"
+      },
+      "SpreadOut": {
+        "properties": {
+          "away": {
+            "$ref": "#/components/schemas/SpreadSideOut"
+          },
+          "home": {
+            "$ref": "#/components/schemas/SpreadSideOut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "away",
+          "home"
+        ],
+        "title": "SpreadOut"
+      },
+      "SpreadSideOut": {
+        "properties": {
+          "line": {
+            "type": "string",
+            "title": "Line",
+            "description": "American-style line string, e.g. \"+7.5\" or \"-3\""
+          },
+          "price": {
+            "type": "integer",
+            "title": "Price",
+            "description": "American odds"
+          }
+        },
+        "type": "object",
+        "required": [
+          "line",
+          "price"
+        ],
+        "title": "SpreadSideOut"
+      },
+      "TeamBrief": {
+        "properties": {
+          "abbr": {
+            "type": "string",
+            "title": "Abbr"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "short": {
+            "type": "string",
+            "title": "Short"
+          },
+          "color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          }
+        },
+        "type": "object",
+        "required": [
+          "abbr",
+          "name",
+          "short"
+        ],
+        "title": "TeamBrief",
+        "description": "Board team blob \u2014 matches mock `{ abbr, name, short, color }`."
+      },
+      "TeamOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "abbr": {
+            "type": "string",
+            "title": "Abbr"
+          },
+          "location": {
+            "type": "string",
+            "title": "Location"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "conference": {
+            "type": "string",
+            "title": "Conference"
+          },
+          "division": {
+            "type": "string",
+            "title": "Division"
+          },
+          "primary_color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Primary Color"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "abbr",
+          "location",
+          "name",
+          "conference",
+          "division",
+          "primary_color"
+        ],
+        "title": "TeamOut",
+        "description": "Full team record (teams index)."
+      },
+      "Theme": {
+        "type": "string",
+        "enum": [
+          "fanduel",
+          "draftkings"
+        ],
+        "title": "Theme",
+        "description": "Sportsbook look-and-feel. Frontend maps missing/null to the skin picker."
+      },
+      "TotalOut": {
+        "properties": {
+          "line": {
+            "type": "number",
+            "title": "Line"
+          },
+          "over": {
+            "type": "integer",
+            "title": "Over"
+          },
+          "under": {
+            "type": "integer",
+            "title": "Under"
+          }
+        },
+        "type": "object",
+        "required": [
+          "line",
+          "over",
+          "under"
+        ],
+        "title": "TotalOut"
+      },
+      "UsageOut": {
+        "properties": {
+          "paywall_enabled": {
+            "type": "boolean",
+            "title": "Paywall Enabled"
+          },
+          "free_limit": {
+            "type": "integer",
+            "title": "Free Limit",
+            "description": "Lifetime free tries per user (FREE_TRIES, default 10)"
+          },
+          "free_used": {
+            "type": "integer",
+            "title": "Free Used"
+          },
+          "free_remaining": {
+            "type": "integer",
+            "title": "Free Remaining"
+          },
+          "paid_balance": {
+            "type": "integer",
+            "title": "Paid Balance",
+            "description": "Purchased tries remaining"
+          },
+          "tries_remaining": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tries Remaining",
+            "description": "free_remaining + paid_balance; null = unlimited"
+          },
+          "unlimited": {
+            "type": "boolean",
+            "title": "Unlimited",
+            "description": "Paywall off or an unlimited comp is active"
+          },
+          "unlimited_until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unlimited Until"
+          },
+          "props_unlocked": {
+            "type": "integer",
+            "title": "Props Unlocked",
+            "description": "Distinct props opened in the current re-open window"
+          },
+          "reopen_scope": {
+            "type": "string",
+            "title": "Reopen Scope",
+            "description": "day | forever: re-opening a prop is free within this scope"
+          },
+          "unlocks_reset_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unlocks Reset At",
+            "description": "Next ET midnight when reopen_scope=day (opened props relock then)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "paywall_enabled",
+          "free_limit",
+          "free_used",
+          "free_remaining",
+          "paid_balance",
+          "tries_remaining",
+          "unlimited",
+          "props_unlocked",
+          "reopen_scope"
+        ],
+        "title": "UsageOut",
+        "description": "Paywall counters for the current user (UI hints \u2014 the server enforces)."
+      },
+      "UserOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "theme": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Theme"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "fanduel | draftkings | null (show skin picker when null)"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "display_name",
+          "theme",
+          "created_at"
+        ],
+        "title": "UserOut"
+      },
+      "WalletOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "balance_cents": {
+            "type": "integer",
+            "title": "Balance Cents"
+          },
+          "is_play_money": {
+            "type": "boolean",
+            "title": "Is Play Money",
+            "default": true
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "currency",
+          "balance_cents",
+          "updated_at"
+        ],
+        "title": "WalletOut"
+      },
+      "WalletTransactionOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "type": {
+            "$ref": "#/components/schemas/WalletTxType"
+          },
+          "amount_cents": {
+            "type": "integer",
+            "title": "Amount Cents"
+          },
+          "balance_after_cents": {
+            "type": "integer",
+            "title": "Balance After Cents"
+          },
+          "bet_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bet Id"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "amount_cents",
+          "balance_after_cents",
+          "bet_id",
+          "description",
+          "created_at"
+        ],
+        "title": "WalletTransactionOut"
+      },
+      "WalletTxType": {
+        "type": "string",
+        "enum": [
+          "signup_bonus",
+          "bet_stake",
+          "bet_payout",
+          "bet_refund",
+          "adjustment"
+        ],
+        "title": "WalletTxType"
+      },
+      "WebhookAck": {
+        "properties": {
+          "received": {
+            "type": "boolean",
+            "title": "Received",
+            "default": true
+          },
+          "duplicate": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duplicate"
+          },
+          "ignored": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ignored"
+          }
+        },
+        "type": "object",
+        "title": "WebhookAck"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "description": "JWT from /auth/login (or use the cookie)",
+        "scheme": "bearer"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "health",
+      "description": "Liveness / DB check"
+    },
+    {
+      "name": "auth",
+      "description": "Signup, login, logout, current user"
+    },
+    {
+      "name": "users",
+      "description": "User preferences (sportsbook theme)"
+    },
+    {
+      "name": "games",
+      "description": "NFL teams, schedule and games with markets"
+    },
+    {
+      "name": "markets",
+      "description": "Odds feed (moneyline, spread, total)"
+    },
+    {
+      "name": "bets",
+      "description": "Quote, place and list bets (single + parlay)"
+    },
+    {
+      "name": "wallet",
+      "description": "Play-money balance and ledger"
+    },
+    {
+      "name": "billing",
+      "description": "Credit packs, Stripe Checkout, usage (TEST MODE ONLY)"
+    },
+    {
+      "name": "webhooks",
+      "description": "Stripe webhook receiver (signature-verified)"
+    }
+  ]
+}
