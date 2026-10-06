@@ -105,6 +105,7 @@ def _sync_props_for_game(db: Session, game: Game, slug: str) -> int:
         # The sample feed has no prior-season window.
         prop.hr_vs_opp_last_pct = prop.hr_vs_opp_last_hit = prop.hr_vs_opp_last_total = None
         prop.hr_vs_opp_last_label = prop.hr_vs_opp_last_season = None
+        db.flush()  # PropBook needs prop.id
         _seed_sample_books(db, prop)
         n += 1
     return n
@@ -112,13 +113,7 @@ def _sync_props_for_game(db: Session, game: Game, slug: str) -> int:
 
 def _seed_sample_books(db: Session, prop: Prop) -> None:
     """Ensure FanDuel + DraftKings sample rows (slightly different prices). Skip if live books exist."""
-    # Session autoflush is off, so a newly added prop has no id until flush.
-    if prop.id is None:
-        db.flush()
-    existing = {
-        b.book: b
-        for b in db.scalars(select(PropBook).where(PropBook.prop_id == prop.id))
-    }
+    existing = {b.book: b for b in db.scalars(select(PropBook).where(PropBook.prop_id == prop.id))}
     if any(b.source != "sample" for b in existing.values()):
         return  # live odds win
     side = "over" if prop.side == SelectionSide.OVER else "under"
@@ -130,9 +125,7 @@ def _seed_sample_books(db: Session, prop: Prop) -> None:
         row = existing.get(book)
         if row is None:
             db.add(
-                PropBook(
-                    prop_id=prop.id, book=book, line=prop.line, price=price, side=side, source="sample"
-                )
+                PropBook(prop_id=prop.id, book=book, line=prop.line, price=price, side=side, source="sample")
             )
         else:
             row.line, row.price, row.side, row.source = prop.line, price, side, "sample"

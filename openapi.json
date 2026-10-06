@@ -2613,6 +2613,44 @@
         ],
         "title": "BillingUsageOut"
       },
+      "BookLineOut": {
+        "properties": {
+          "line": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line",
+            "description": "O/U threshold; null for anytime_td Yes/No"
+          },
+          "price": {
+            "type": "integer",
+            "title": "Price",
+            "description": "American odds"
+          },
+          "hitRate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HitRateOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "line",
+          "price"
+        ],
+        "title": "BookLineOut",
+        "description": "One sportsbook's quote for a prop. `line` is numeric (null for anytime TD)."
+      },
       "CheckoutIn": {
         "properties": {
           "pack": {
@@ -3475,6 +3513,33 @@
         ],
         "title": "PreferencesUpdate"
       },
+      "PropBooksOut": {
+        "properties": {
+          "fanduel": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BookLineOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "draftkings": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BookLineOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "PropBooksOut",
+        "description": "Per-book quotes. A missing book is null and MUST NEVER be copied from the other."
+      },
       "PropDetailOut": {
         "properties": {
           "id": {
@@ -3499,12 +3564,12 @@
           "line": {
             "type": "string",
             "title": "Line",
-            "description": "e.g. \"Over 4.5\""
+            "description": "e.g. \"Over 4.5\" (from the preferred book; see `book`)"
           },
           "price": {
             "type": "integer",
             "title": "Price",
-            "description": "American odds"
+            "description": "American odds from the preferred book (see `book`)"
           },
           "hitRate": {
             "anyOf": [
@@ -3515,6 +3580,22 @@
                 "type": "null"
               }
             ]
+          },
+          "books": {
+            "$ref": "#/components/schemas/PropBooksOut",
+            "description": "FanDuel and DraftKings quotes; null means that book has no line"
+          },
+          "book": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Book",
+            "description": "Which book top-level line/price/hitRate came from: \"fanduel\" | \"draftkings\". Frontend shows a tag when this differs from the user's skin."
           },
           "selectionKey": {
             "type": "string",
@@ -3536,13 +3617,13 @@
           "isSample": {
             "type": "boolean",
             "title": "Issample",
-            "description": "True when line/price are SAMPLE (no lines feed yet)",
+            "description": "False only when playerId is set AND at least one book quote is non-null",
             "default": true
           },
           "lineSource": {
             "type": "string",
             "title": "Linesource",
-            "description": "Where line/price come from: \"sample\" for now",
+            "description": "Where line/price come from: \"sample\" | \"odds_api\" | \"plan_data_odds\"",
             "default": "sample"
           },
           "hitRateSource": {
@@ -3641,12 +3722,12 @@
           "line": {
             "type": "string",
             "title": "Line",
-            "description": "e.g. \"Over 4.5\""
+            "description": "e.g. \"Over 4.5\" (from the preferred book; see `book`)"
           },
           "price": {
             "type": "integer",
             "title": "Price",
-            "description": "American odds"
+            "description": "American odds from the preferred book (see `book`)"
           },
           "hitRate": {
             "anyOf": [
@@ -3657,6 +3738,22 @@
                 "type": "null"
               }
             ]
+          },
+          "books": {
+            "$ref": "#/components/schemas/PropBooksOut",
+            "description": "FanDuel and DraftKings quotes; null means that book has no line"
+          },
+          "book": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Book",
+            "description": "Which book top-level line/price/hitRate came from: \"fanduel\" | \"draftkings\". Frontend shows a tag when this differs from the user's skin."
           },
           "selectionKey": {
             "type": "string",
@@ -3678,13 +3775,13 @@
           "isSample": {
             "type": "boolean",
             "title": "Issample",
-            "description": "True when line/price are SAMPLE (no lines feed yet)",
+            "description": "False only when playerId is set AND at least one book quote is non-null",
             "default": true
           },
           "lineSource": {
             "type": "string",
             "title": "Linesource",
-            "description": "Where line/price come from: \"sample\" for now",
+            "description": "Where line/price come from: \"sample\" | \"odds_api\" | \"plan_data_odds\"",
             "default": "sample"
           },
           "hitRateSource": {

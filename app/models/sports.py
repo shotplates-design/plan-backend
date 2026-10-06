@@ -188,6 +188,7 @@ class Prop(TimestampMixin, Base):
         back_populates="prop", cascade="all, delete-orphan", order_by="PropBook.book"
     )
 
+
 _JSON = JSON().with_variant(JSONB, "postgresql")
 
 

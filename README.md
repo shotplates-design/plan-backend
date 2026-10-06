@@ -13,7 +13,7 @@ cd /workspace/plan-backend
 uv sync
 
 # 2. Env
-cp .env.example .env   # then fill in local values; this file stays uncommitted
+cp .env.example .env   # JWT_SECRET is already randomised if you keep the generated .env
 
 # 3. Database — pick one:
 #    a) Docker (if available):  docker compose up -d db
@@ -381,6 +381,8 @@ Rows that disappear from the files for that season (or that matchup week) are de
 - The player's current team comes from the matchups file, then the roster. If the player is on neither team of the prop's game (and the prop couldn't be moved), the prop gets `data_status=player_not_in_game`, is closed (`is_open=false`), is hidden from the board, and its detail returns 404. The row is kept because bets reference it. It reopens automatically if a later load puts the player back on a game team.
 - Unmatched players → `hitRateSource: "none"`, `hitRate: null`.
 - Re-running `seed`/`sync` refreshes sample lines/prices but never overwrites real hit rates or teams.
+
+**Prop lines (FanDuel / DraftKings):** `load-nfl-data` also reads `odds/prop_lines_week{N}_{season}.json` (Plan Data's Odds API snapshot). Props get a `books` object (`fanduel` / `draftkings`, null when that book didn't post — never copied). Top-level `line`/`price`/`hitRate` follow the user's theme (`/users/me/preferences`), with `book` naming the source. `isSample=false` only when `playerId` is set and at least one book quote has a live source (`plan_data_odds`). Without the file, sample dual-book rows are seeded. Optional `ODDS_API_KEY` enables future re-pulls via `app.odds_provider.the_odds_api`; it is not required to boot.
 
 **Real schedule import** (`schedule_games_raw.csv`). It imports the week of the matchups file (else `through_week + 1`; override with `--schedule-week N`). Week 5 = 15 games; KC and CAR are on bye.
 - **Games** are matched by `nfl_game_id`. Slugs are `{away}-{home}` with our abbreviations (LA → LAR, reported in a WARN line).

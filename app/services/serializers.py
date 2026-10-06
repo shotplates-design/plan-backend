@@ -219,9 +219,7 @@ def prop_out(prop: Prop, game_slug: str, access: Access | None = None) -> PropOu
             continue
         # Share prop hit rates when this book's line matches the prop's canonical line (or no blob).
         same_line = (
-            row.line is not None
-            and prop.line is not None
-            and abs(float(row.line) - float(prop.line)) < 1e-9
+            row.line is not None and prop.line is not None and abs(float(row.line) - float(prop.line)) < 1e-9
         ) or (row.line is None and (prop.line is None or float(prop.line) == 0))
         hr = _hit_rate_from_blob(row.hit_rate, prop_hit if same_line or row.hit_rate is None else None)
         books_out[name] = BookLineOut(
@@ -268,14 +266,12 @@ def prop_out(prop: Prop, game_slug: str, access: Access | None = None) -> PropOu
         hr, _ = _apply_paywall(bl.hitRate, unlocked)
         books_out[name] = BookLineOut(line=bl.line, price=bl.price, hitRate=hr)
 
-    # Sample dual-book rows are still sample lines. isSample flips only for a real quote.
+    # Live = matched player + at least one book quote that is NOT our sample seed.
     live = prop.player_gsis_id is not None and any(
-        books_out[b] is not None and (getattr(by_book.get(b), "source", None) or "sample") != "sample"
-        for b in BOOKS
+        b in by_book and by_book[b].source != "sample" for b in BOOKS
     )
     line_source = prop.line_source or "sample"
     if live and line_source == "sample":
-        # Prefer book row source when prop still says sample (shouldn't happen after loader).
         line_source = getattr(row, "source", None) or "odds_api"
 
     return PropOut(

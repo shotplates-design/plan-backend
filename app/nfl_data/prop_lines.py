@@ -3,7 +3,7 @@
 Primary source (week 5): `/workspace/plan-nfl-data/odds/prop_lines_week5_2026.json`
 Spec: plan-nfl-data/odds/README.md
 
-isSample = false only when player_id is non-null AND at least one non-sample book quote is present.
+isSample = false only when player_id is non-null AND at least one book quote is non-null.
 Missing books stay null — never copied from the other book.
 """
 
@@ -25,7 +25,7 @@ from app.models import Game, Player, PlayerGameStat, PlayerSeasonStat, Prop, Pro
 from app.models.enums import SelectionSide
 from app.nfl_data.files import DataSet, name_key, team
 from app.nfl_data.hit_rates import GameLog, compute_hit_rates, compute_vs_opp_season, season_label
-from app.nfl_data.markets import BOOKS, BOARD_STAT_KEYS, MARKET_ID_SUFFIX, ODDS_TO_BOARD
+from app.nfl_data.markets import BOARD_STAT_KEYS, MARKET_ID_SUFFIX, ODDS_TO_BOARD
 
 SOURCE = "plan_data_odds"
 DEFAULT_ODDS_GLOB = "prop_lines_week*_*.json"
@@ -154,7 +154,11 @@ def _apply_blob_to_prop(prop: Prop, blob: dict[str, Any] | None, season: int, th
     prop.hr_last5_hit, prop.hr_last5_total, prop.hr_last5_pct = l5.get("hit"), l5.get("total"), l5.get("pct")
     vs = blob.get("vsOpp")
     if vs:
-        prop.hr_vs_opp_hit, prop.hr_vs_opp_total, prop.hr_vs_opp_pct = vs.get("hit"), vs.get("total"), vs.get("pct")
+        prop.hr_vs_opp_hit, prop.hr_vs_opp_total, prop.hr_vs_opp_pct = (
+            vs.get("hit"),
+            vs.get("total"),
+            vs.get("pct"),
+        )
         prop.hr_vs_opp_label, prop.hr_vs_opp_season = vs.get("label"), vs.get("season") or season
         prop.hr_vs_opp_opponent = vs.get("opponent")
     last = blob.get("vsOppLastSeason")
@@ -197,7 +201,11 @@ def apply_prop_lines(
     odds_path: Path | None = None,
 ) -> None:
     """Upsert book lines from Plan Data's odds snapshot; create props when needed."""
-    paths = [odds_path] if odds_path else find_odds_files(ds.directory, ds.season, ds.schedule_week or ds.matchup_week)
+    paths = (
+        [odds_path]
+        if odds_path
+        else find_odds_files(ds.directory, ds.season, ds.schedule_week or ds.matchup_week)
+    )
     if not paths:
         report.warnings.append("no odds/prop_lines_week*_*.json: props keep sample / dual-book seed lines")
         report.counts["odds_props_live"] = 0
@@ -281,22 +289,14 @@ def apply_prop_lines(
         used_ids = {p.external_id for p in game.props}
         # Match existing prop: same player_gsis_id + market on this game
         prop = next(
-            (
-                p
-                for p in game.props
-                if p.player_gsis_id == gsis and p.market == board_market
-            ),
+            (p for p in game.props if p.player_gsis_id == gsis and p.market == board_market),
             None,
         )
         if prop is None:
             # Also match by normalised name + market (sample props may lack player_gsis until recompute)
             nk = name_key(raw.get("player_name_odds") or player.full_name)
             prop = next(
-                (
-                    p
-                    for p in game.props
-                    if p.market == board_market and name_key(p.player) == nk
-                ),
+                (p for p in game.props if p.market == board_market and name_key(p.player) == nk),
                 None,
             )
         if prop is None:
@@ -304,11 +304,7 @@ def apply_prop_lines(
             # Prefer FD line for the canonical prop fields, else DK
             primary = fd or dk
             side = (primary.get("side") or "over").lower()
-            line = (
-                None
-                if primary.get("line") is None
-                else Decimal(str(primary["line"]))
-            )
+            line = None if primary.get("line") is None else Decimal(str(primary["line"]))
             prop = Prop(
                 game_id=game.id,
                 external_id=ext,
@@ -321,9 +317,8 @@ def apply_prop_lines(
                 odds_american=int(primary["price"]),
                 player_id=player.id,
                 player_gsis_id=gsis,
-                stat_key=BOARD_STAT_KEYS.get(board_market) or (
-                    "anytime_td" if board_market == "Anytime TD" else None
-                ),
+                stat_key=BOARD_STAT_KEYS.get(board_market)
+                or ("anytime_td" if board_market == "Anytime TD" else None),
                 line_source=SOURCE,
                 hit_rate_source="plan_data",
                 data_status="ok",

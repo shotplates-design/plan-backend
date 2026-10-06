@@ -56,7 +56,7 @@ class OddsApiClient:
         q = urlencode({**params, "apiKey": self.api_key})
         req = Request(f"{self.base_url}{path}?{q}", headers={"Accept": "application/json"})
         try:
-            with urlopen(req, timeout=30) as resp:  # noqa: S310 — fixed https host
+            with urlopen(req, timeout=30) as resp:
                 self.last_headers = {
                     k: resp.headers.get(k, "")
                     for k in ("x-requests-remaining", "x-requests-used", "x-requests-last")

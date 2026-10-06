@@ -557,10 +557,12 @@ def recompute_prop_hit_rates(
         played = [g for g in logs.get(player.id, []) if g.played and g.week < game.week]
         excluded = sum(1 for g in logs.get(player.id, []) if g.played and g.week >= game.week)
         games_played = (sstat.games_played - excluded) if sstat else len(played)
+
         def _val(g, key=stat_key):
             if key == "anytime_td":
                 return (g.receiving_tds or 0) + (g.rushing_tds or 0) + (g.passing_tds or 0)
             return getattr(g, key)
+
         hr = compute_hit_rates(
             [GameLog(g.season, g.week, g.opponent_abbr, _val(g), g.played) for g in played],
             games_played=games_played,

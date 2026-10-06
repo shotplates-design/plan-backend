@@ -116,7 +116,7 @@ class PropOut(APIModel):
     playerId: str | None = Field(None, description="GSIS player id (nflverse), when matched to real data")
     isSample: bool = Field(
         True,
-        description="False only when playerId is set AND at least one non-sample book quote is present",
+        description="False only when playerId is set AND at least one book quote is non-null",
     )
     lineSource: str = Field(
         "sample", description='Where line/price come from: "sample" | "odds_api" | "plan_data_odds"'
