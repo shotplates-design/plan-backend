@@ -1,0 +1,38 @@
+"""Static NFL team reference data (32 clubs)."""
+
+from app.odds_provider.base import ProviderTeam
+
+NFL_TEAMS: list[ProviderTeam] = [
+    ProviderTeam("BUF", "Buffalo", "Bills", "AFC", "East", "#00338D"),
+    ProviderTeam("MIA", "Miami", "Dolphins", "AFC", "East", "#008E97"),
+    ProviderTeam("NE", "New England", "Patriots", "AFC", "East", "#002244"),
+    ProviderTeam("NYJ", "New York", "Jets", "AFC", "East", "#125740"),
+    ProviderTeam("BAL", "Baltimore", "Ravens", "AFC", "North", "#241773"),
+    ProviderTeam("CIN", "Cincinnati", "Bengals", "AFC", "North", "#FB4F14"),
+    ProviderTeam("CLE", "Cleveland", "Browns", "AFC", "North", "#311D00"),
+    ProviderTeam("PIT", "Pittsburgh", "Steelers", "AFC", "North", "#FFB612"),
+    ProviderTeam("HOU", "Houston", "Texans", "AFC", "South", "#03202F"),
+    ProviderTeam("IND", "Indianapolis", "Colts", "AFC", "South", "#002C5F"),
+    ProviderTeam("JAX", "Jacksonville", "Jaguars", "AFC", "South", "#006778"),
+    ProviderTeam("TEN", "Tennessee", "Titans", "AFC", "South", "#0C2340"),
+    ProviderTeam("DEN", "Denver", "Broncos", "AFC", "West", "#FB4F14"),
+    ProviderTeam("KC", "Kansas City", "Chiefs", "AFC", "West", "#E31837"),
+    ProviderTeam("LV", "Las Vegas", "Raiders", "AFC", "West", "#000000"),
+    ProviderTeam("LAC", "Los Angeles", "Chargers", "AFC", "West", "#0080C6"),
+    ProviderTeam("DAL", "Dallas", "Cowboys", "NFC", "East", "#003594"),
+    ProviderTeam("NYG", "New York", "Giants", "NFC", "East", "#0B2265"),
+    ProviderTeam("PHI", "Philadelphia", "Eagles", "NFC", "East", "#004C54"),
+    ProviderTeam("WAS", "Washington", "Commanders", "NFC", "East", "#5A1414"),
+    ProviderTeam("CHI", "Chicago", "Bears", "NFC", "North", "#0B162A"),
+    ProviderTeam("DET", "Detroit", "Lions", "NFC", "North", "#0076B6"),
+    ProviderTeam("GB", "Green Bay", "Packers", "NFC", "North", "#203731"),
+    ProviderTeam("MIN", "Minnesota", "Vikings", "NFC", "North", "#4F2683"),
+    ProviderTeam("ATL", "Atlanta", "Falcons", "NFC", "South", "#A71930"),
+    ProviderTeam("CAR", "Carolina", "Panthers", "NFC", "South", "#0085CA"),
+    ProviderTeam("NO", "New Orleans", "Saints", "NFC", "South", "#D3BC8D"),
+    ProviderTeam("TB", "Tampa Bay", "Buccaneers", "NFC", "South", "#D50A0A"),
+    ProviderTeam("ARI", "Arizona", "Cardinals", "NFC", "West", "#97233F"),
+    ProviderTeam("LAR", "Los Angeles", "Rams", "NFC", "West", "#003594"),
+    ProviderTeam("SF", "San Francisco", "49ers", "NFC", "West", "#AA0000"),
+    ProviderTeam("SEA", "Seattle", "Seahawks", "NFC", "West", "#002244"),
+]
